@@ -1,67 +1,43 @@
 <?php
 session_start();
 require_once '../config/db.php';
-
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: login.php');
-    exit;
-}
-
+if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
+$categories = $pdo->query("SELECT * FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$error = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name']);
-    $category = trim($_POST['category']);
-    $price = (float)$_POST['price'];
-    $stock = (int)$_POST['stock'];
-    $image = trim($_POST['image']);
+    $name        = trim($_POST['name']);
+    $category_id = (int)$_POST['category_id'];
+    $price       = (float)$_POST['price'];
+    $image       = trim($_POST['image']);
     $description = trim($_POST['description']);
-
-    $stmt = $pdo->prepare("INSERT INTO products (name, category, price, stock, image, description) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->execute([$name, $category, $price, $stock, $image, $description]);
-
-    header('Location: dashboard.php');
-    exit;
+    if (empty($name) || $category_id <= 0 || $price <= 0) {
+        $error = "Бүх шаардлагатай талбарыг бөглөнө үү";
+    } else {
+        $stmt = $pdo->prepare("INSERT INTO products (category_id, name, price, image, description) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$category_id, $name, $price, $image, $description]);
+        header('Location: dashboard.php'); exit;
+    }
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Product</title>
-    <link rel="stylesheet" href="/online-shop/css/style.css">
-</head>
-<body>
-    <div class="form-box">
-        <h2>Add Product</h2>
-        <form method="post">
-            <label>Product Name</label>
-            <input type="text" name="name" required>
-
-            <label>Category</label>
-            <select name="category" required>
-                <option value="T-Shirt">T-Shirt</option>
-                <option value="Hoodie">Hoodie</option>
-                <option value="Jacket">Jacket</option>
-                <option value="Pants">Pants</option>
-                <option value="Shoes">Shoes</option>
-            </select>
-
-            <label>Price</label>
-            <input type="number" step="0.01" name="price" required>
-
-            <label>Stock</label>
-            <input type="number" name="stock" required>
-
-            <label>Image URL</label>
-            <input type="text" name="image" placeholder="images/shirt1.jpg or https://...">
-
-            <label>Description</label>
-            <textarea name="description" rows="5"></textarea>
-
-            <button type="submit" class="btn">Save Product</button>
-        </form>
-        <br>
-        <a href="dashboard.php">Back</a>
-    </div>
-</body>
-</html>
+<html><head><meta charset="UTF-8"><title>Бүтээгдэхүүн нэмэх</title>
+<link rel="stylesheet" href="/online-shop/css/style.css"></head>
+<body><div class="form-box">
+<h2>Бүтээгдэхүүн нэмэх</h2>
+<?php if ($error): ?><p class="warning"><?= htmlspecialchars($error) ?></p><?php endif; ?>
+<form method="post">
+<label>Нэр</label><input type="text" name="name" required>
+<label>Ангилал</label>
+<select name="category_id" required style="width:100%;padding:14px;margin:12px 0;border:1px solid #d1d5db;border-radius:12px;">
+<?php foreach ($categories as $c): ?>
+<option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
+<?php endforeach; ?>
+</select>
+<label>Үнэ (₮)</label><input type="number" step="1000" name="price" required>
+<label>Зураг</label><input type="text" name="image" placeholder="shirt1.jpg">
+<label>Тайлбар</label>
+<textarea name="description" rows="4" style="width:100%;padding:14px;border:1px solid #d1d5db;border-radius:12px;"></textarea>
+<button type="submit">Хадгалах</button>
+</form>
+<br><a href="dashboard.php">← Буцах</a>
+</div></body></html>

@@ -1,73 +1,74 @@
 <?php
-require_once 'config/db.php';
-include 'includes/header.php';
-
-if (empty($_SESSION['cart'])) {
-    header('Location: cart.php');
-    exit;
-}
-
-$total = 0;
-foreach ($_SESSION['cart'] as $item) {
-    $total += $item['price'] * $item['quantity'];
-}
-
+session_start();
+require_once "config/db.php";
+$error = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $customer_name = trim($_POST['customer_name']);
-    $phone = trim($_POST['phone']);
-    $address = trim($_POST['address']);
-
-    if ($customer_name && $phone && $address) {
-        $pdo->beginTransaction();
-        try {
-            $stmt = $pdo->prepare("INSERT INTO orders (customer_name, phone, address, total_price) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$customer_name, $phone, $address, $total]);
-            $order_id = $pdo->lastInsertId();
-
-            $item_stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)");
-            $stock_stmt = $pdo->prepare("UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?");
-
-            foreach ($_SESSION['cart'] as $item) {
-                $item_stmt->execute([$order_id, $item['id'], $item['quantity'], $item['price']]);
-                $stock_stmt->execute([$item['quantity'], $item['id'], $item['quantity']]);
-            }
-
-            $pdo->commit();
-            $_SESSION['cart'] = [];
-            header('Location: order_success.php');
-            exit;
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            $error = 'Order failed: ' . $e->getMessage();
-        }
+    $name    = trim($_POST['fullname'] ?? '');
+    $phone   = trim($_POST['phone'] ?? '');
+    $address = trim($_POST['address'] ?? '');
+    $payment = trim($_POST['payment'] ?? '');
+    if (empty($name) || empty($phone) || empty($address)) {
+        $error = "Бүх талбарыг бөглөнө үү";
+    } elseif (empty($_SESSION['cart'])) {
+        $error = "Сагс хоосон байна";
     } else {
-        $error = 'Please fill in all fields.';
+        $total = 0; $items = [];
+        foreach ($_SESSION['cart'] as $item) {
+            $total += $item['price'] * $item['quantity'];
+            $items[] = $item['name'] . ' x' . $item['quantity'];
+        }
+        $items_str  = implode(', ', $items);
+        $user_email = $_SESSION['user'] ?? 'guest';
+        $stmt = $pdo->prepare("INSERT INTO orders (user_email, fullname, phone, address, payment, items, total) VALUES (?,?,?,?,?,?,?)");
+        $stmt->execute([$user_email, $name, $phone, $address, $payment, $items_str, $total]);
+        $_SESSION['cart'] = [];
+        header("Location: order_success.php"); exit;
     }
 }
+$total = 0;
+$item_count = 0;
+foreach ($_SESSION['cart'] ?? [] as $item) {
+    $total += $item['price'] * $item['quantity'];
+    $item_count += $item['quantity'];
+}
 ?>
-
+<!DOCTYPE html>
+<html lang="mn"><head><meta charset="UTF-8">
+<title>Захиалга — UrbanWear</title>
+<link rel="stylesheet" href="/online-shop/css/style.css"></head>
+<body>
+<header class="topbar"><div class="inner">
+<a href="index.php" class="logo">Urban<span>Wear</span></a>
+<nav><a href="index.php">Home</a><a href="cart.php">← Сагс (<?= $item_count ?>)</a></nav>
+</div></header>
+<div class="page-header"><div class="container">
+<div class="breadcrumb"><a href="index.php">Home</a> › <a href="cart.php">Сагс</a> › Захиалга</div>
+<h1>Захиалга Хийх</h1>
+</div></div>
+<section class="section"><div class="container">
 <div class="form-box">
-    <h2>Checkout</h2>
-    <br>
-    <p><strong>Total:</strong> $<?php echo number_format($total, 2); ?></p>
-    <br>
-
-    <?php if (!empty($error)): ?>
-        <div class="error"><?php echo htmlspecialchars($error); ?></div>
-    <?php endif; ?>
-
-    <form method="post">
-        <label>Full Name</label>
-        <input type="text" name="customer_name" required>
-
-        <label>Phone</label>
-        <input type="text" name="phone" required>
-
-        <label>Address</label>
-        <textarea name="address" rows="4" required></textarea>
-
-        <button type="submit" class="btn">Place Order</button>
-    </form>
+<h2>Хүргэлтийн мэдээлэл</h2>
+<p class="subtitle">Нийт: <strong style="color:var(--purple-light)"><?= number_format($total) ?>₮</strong> — <?= $item_count ?> бараа</p>
+<?php if ($error): ?><div class="message error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
+<form method="POST">
+<label>Овог нэр</label>
+<input type="text" name="fullname" placeholder="Таны бүтэн нэр" required>
+<label>Утасны дугаар</label>
+<input type="text" name="phone" placeholder="+976 xxxxxxxx" required>
+<label>Хүргэлтийн хаяг</label>
+<input type="text" name="address" placeholder="Дүүрэг, хороо, байр, тоот" required>
+<label>Төлбөрийн арга</label>
+<select name="payment">
+<option value="QPay">QPay</option>
+<option value="Карт">Банкны карт</option>
+<option value="Бэлэн">Бэлэн мөнгө</option>
+</select>
+<button type="submit">✓ Захиалга баталгаажуулах</button>
+</form>
 </div>
-
-<?php include 'includes/footer.php'; ?>
+</div></section>
+<footer><div class="footer-inner">
+<div class="footer-logo">Urban<span>Wear</span></div>
+<div class="footer-copy">© 2026 UrbanWear.</div>
+</div></footer>
+</body></html>
