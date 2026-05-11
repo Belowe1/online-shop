@@ -1,5 +1,5 @@
 <?php
-session_start(); require_once '../config/db.php';
+require_once '../config/db.php'; session_start();
 if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
 $products = $pdo->query("SELECT p.*,c.name as cat_name FROM products p LEFT JOIN categories c ON p.category_id=c.id ORDER BY p.id DESC")->fetchAll(PDO::FETCH_ASSOC);
 $users = $pdo->query("SELECT * FROM users ORDER BY created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -41,7 +41,11 @@ $total_revenue = array_sum(array_column($orders, 'total'));
 <?php foreach ($products as $p): ?>
 <tr><td>#<?= $p['id'] ?></td><td><?= htmlspecialchars($p['name']) ?></td><td><?= htmlspecialchars($p['cat_name']??'-') ?></td>
 <td style="color:var(--purple-light);font-weight:600;"><?= number_format($p['price']) ?>₮</td>
-<td><a href="delete_product.php?id=<?= $p['id'] ?>" style="color:#FCA5A5;font-size:13px;" onclick="return confirm('Устгах уу?')">Устгах</a></td></tr>
+<td><form method="POST" action="delete_product.php" onsubmit="return confirm('Устгах уу?')" style="display:inline;">
+<input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+<input type="hidden" name="id" value="<?= $p['id'] ?>">
+<button type="submit" style="background:none;border:none;color:#FCA5A5;font-size:13px;cursor:pointer;padding:0;">Устгах</button>
+</form></td></tr>
 <?php endforeach; ?>
 </table></div>
 <div id="orders" style="display:none;">

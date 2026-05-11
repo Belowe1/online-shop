@@ -1,6 +1,5 @@
 <?php
-session_start();
-require_once '../config/db.php';
+require_once '../config/db.php'; session_start();
 if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
 $categories = $pdo->query("SELECT * FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $error = "";

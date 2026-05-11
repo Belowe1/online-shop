@@ -1,6 +1,5 @@
 <?php
-session_start();
-require_once "config/db.php";
+require_once "config/db.php"; session_start();
 if (!isset($_SESSION['user'])) { header("Location: login.php"); exit; }
 
 $stmt = $pdo->prepare("SELECT * FROM users WHERE email=?");
@@ -41,7 +40,7 @@ try {
 <div style="width:72px;height:72px;border-radius:50%;background:rgba(124,58,237,0.3);border:2px solid var(--purple);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;">👤</div>
 <div>
 <h2 style="font-size:22px;margin-bottom:4px;"><?= htmlspecialchars($user['email']) ?></h2>
-<p style="color:var(--gray);font-size:13px;">Бүртгэгдсэн огноо: <?= $user['created_at'] ?></p>
+<p style="color:var(--gray);font-size:13px;">Бүртгэгдсэн огноо: <?= htmlspecialchars($user['created_at']) ?></p>
 </div>
 </div>
 <div style="display:flex;gap:12px;flex-wrap:wrap;">

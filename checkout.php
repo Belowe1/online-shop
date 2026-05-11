@@ -1,14 +1,20 @@
 <?php
-session_start();
-require_once "config/db.php";
+require_once "config/db.php"; session_start();
+if (!isset($_SESSION['user'])) { header("Location: login.php?redirect=checkout"); exit; }
 $error = "";
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
     $name    = trim($_POST['fullname'] ?? '');
     $phone   = trim($_POST['phone'] ?? '');
     $address = trim($_POST['address'] ?? '');
     $payment = trim($_POST['payment'] ?? '');
+    $allowed_payments = ['QPay', 'Карт', 'Бэлэн'];
     if (empty($name) || empty($phone) || empty($address)) {
         $error = "Бүх талбарыг бөглөнө үү";
+    } elseif (!preg_match('/^[0-9]{8}$/', $phone)) {
+        $error = "Утасны дугаар яг 8 оронтой байх ёстой";
+    } elseif (!in_array($payment, $allowed_payments, true)) {
+        $error = "Буруу төлбөрийн арга";
     } elseif (empty($_SESSION['cart'])) {
         $error = "Сагс хоосон байна";
     } else {
@@ -18,15 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $items[] = $item['name'] . ' x' . $item['quantity'];
         }
         $items_str  = implode(', ', $items);
-        $user_email = $_SESSION['user'] ?? 'guest';
+        $user_email = $_SESSION['user'];
         $stmt = $pdo->prepare("INSERT INTO orders (user_email, fullname, phone, address, payment, items, total) VALUES (?,?,?,?,?,?,?)");
         $stmt->execute([$user_email, $name, $phone, $address, $payment, $items_str, $total]);
         $_SESSION['cart'] = [];
         header("Location: order_success.php"); exit;
     }
 }
-$total = 0;
-$item_count = 0;
+$total = 0; $item_count = 0;
 foreach ($_SESSION['cart'] ?? [] as $item) {
     $total += $item['price'] * $item['quantity'];
     $item_count += $item['quantity'];
@@ -51,10 +56,11 @@ foreach ($_SESSION['cart'] ?? [] as $item) {
 <p class="subtitle">Нийт: <strong style="color:var(--purple-light)"><?= number_format($total) ?>₮</strong> — <?= $item_count ?> бараа</p>
 <?php if ($error): ?><div class="message error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
 <form method="POST">
+<input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 <label>Овог нэр</label>
 <input type="text" name="fullname" placeholder="Таны бүтэн нэр" required>
 <label>Утасны дугаар</label>
-<input type="text" name="phone" placeholder="+976 xxxxxxxx" required>
+<input type="text" name="phone" placeholder="99887766" maxlength="8" pattern="[0-9]{8}" required>
 <label>Хүргэлтийн хаяг</label>
 <input type="text" name="address" placeholder="Дүүрэг, хороо, байр, тоот" required>
 <label>Төлбөрийн арга</label>

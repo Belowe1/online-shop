@@ -1,14 +1,10 @@
 <?php
-session_start();
-require_once '../config/db.php';
+require_once '../config/db.php'; session_start();
+if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
 
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: login.php');
-    exit;
-}
-
-if (isset($_GET['id']) && is_numeric($_GET['id'])) {
-    $id = (int)$_GET['id'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
+    csrf_verify();
+    $id = (int)$_POST['id'];
     $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
     $stmt->execute([$id]);
 }

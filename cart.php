@@ -1,8 +1,8 @@
 <?php
-session_start();
-require_once "config/db.php";
+require_once "config/db.php"; session_start();
 if (!isset($_SESSION['cart'])) $_SESSION['cart'] = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
+    csrf_verify();
     $pid = (int)$_POST['product_id'];
     $qty = isset($_POST['quantity']) ? (int)$_POST['quantity'] : 1;
     if ($qty < 1) $qty = 1;

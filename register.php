@@ -1,16 +1,28 @@
 <?php
-require_once "config/db.php"; $message = ""; $msg_type = "";
+require_once "config/db.php"; session_start(); $message = ""; $msg_type = "";
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $email = trim($_POST["email"]); $password = trim($_POST["password"]);
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) { $message="Email буруу"; $msg_type="error"; }
-    elseif (strlen($password) < 8) { $message="8+ тэмдэгт оруулна уу"; $msg_type="error"; }
-    elseif (!preg_match("/[A-Z]/", $password)) { $message="Том үсэг байх ёстой"; $msg_type="error"; }
-    elseif (!preg_match("/[0-9]/", $password)) { $message="Тоо байх ёстой"; $msg_type="error"; }
-    else {
-        $hash = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO users (email, password_hash) VALUES (?, ?)");
-        $stmt->execute([$email, $hash]);
-        $message="Бүртгэл амжилттай!"; $msg_type="success";
+    csrf_verify();
+    $email    = trim($_POST["email"]);
+    $password = trim($_POST["password"]);
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message = "Email буруу"; $msg_type = "error";
+    } elseif (strlen($password) < 8) {
+        $message = "8+ тэмдэгт оруулна уу"; $msg_type = "error";
+    } elseif (!preg_match("/[A-Z]/", $password)) {
+        $message = "Том үсэг байх ёстой"; $msg_type = "error";
+    } elseif (!preg_match("/[0-9]/", $password)) {
+        $message = "Тоо байх ёстой"; $msg_type = "error";
+    } else {
+        $chk = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $chk->execute([$email]);
+        if ($chk->fetch()) {
+            $message = "Энэ email бүртгэлтэй байна"; $msg_type = "error";
+        } else {
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $pdo->prepare("INSERT INTO users (email, password_hash) VALUES (?, ?)");
+            $stmt->execute([$email, $hash]);
+            $message = "Бүртгэл амжилттай!"; $msg_type = "success";
+        }
     }
 }
 ?>
@@ -22,6 +34,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <h2>Бүртгүүлэх</h2><p class="subtitle">Crew-д нэгдэж онцгой санал авааарай</p>
 <?php if ($message): ?><div class="message <?= $msg_type ?>"><?= htmlspecialchars($message) ?></div><?php endif; ?>
 <form method="POST">
+<input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 <label>Email</label><input type="email" name="email" placeholder="you@example.com" required>
 <label>Нууц үг</label><input type="password" name="password" placeholder="Хамгийн багадаа 8 тэмдэгт" required>
 <button type="submit">Бүртгүүлэх</button>

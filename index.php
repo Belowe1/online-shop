@@ -20,9 +20,7 @@ $cat_icons = ['Гутал'=>'👟','Цамц'=>'👕','Өмд'=>'👖'];
 <a href="cart.php">🛒 Cart</a><a href="profile.php">Profile</a><a href="logout.php">Гарах</a>
 <?php else: ?>
 <a href="register.php">Бүртгэл</a><a href="login.php">Нэвтрэх</a>
-<?php endif; ?>
-<a href="vulnerable_login.php" style="border:1px solid rgba(245,158,11,0.4);color:#F59E0B;">Security Lab</a>
-</nav>
+<?php endif; ?></nav>
 </div></header>
 <section class="hero">
 <div class="hero-bg"></div>

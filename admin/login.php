@@ -1,28 +1,29 @@
 <?php
-session_start();
-require_once '../config/db.php';
-
-if (isset($_SESSION['admin_id'])) {
-    header('Location: dashboard.php');
-    exit;
-}
+require_once '../config/db.php'; session_start();
+if (isset($_SESSION['admin_id'])) { header('Location: dashboard.php'); exit; }
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email']);
-    $password = trim($_POST['password']);
-
-    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND is_admin = 1");
-    $stmt->execute([$email]);
-    $admin = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($admin && password_verify($password, $admin['password_hash'])) {
-        $_SESSION['admin_id'] = $admin['id'];
-        $_SESSION['admin_username'] = $admin['email'];
-        header('Location: dashboard.php');
-        exit;
+    csrf_verify();
+    $ip = $_SERVER['REMOTE_ADDR'];
+    if (is_rate_limited($pdo, $ip)) {
+        $error = 'Та 5 удаа буруу оруулсан. 15 минут хүлээнэ үү.';
     } else {
-        $error = 'Email эсвэл нууц үг буруу байна';
+        $email    = trim($_POST['email']);
+        $password = trim($_POST['password']);
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND is_admin = 1");
+        $stmt->execute([$email]);
+        $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($admin && password_verify($password, $admin['password_hash'])) {
+            clear_login_attempts($pdo, $ip);
+            session_regenerate_id(true);
+            $_SESSION['admin_id']       = $admin['id'];
+            $_SESSION['admin_username'] = $admin['email'];
+            header('Location: dashboard.php'); exit;
+        } else {
+            record_failed_login($pdo, $ip);
+            $error = 'Email эсвэл нууц үг буруу байна';
+        }
     }
 }
 ?>
@@ -45,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="message error"><?= htmlspecialchars($error) ?></div>
 <?php endif; ?>
 <form method="POST">
+    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
     <label>Email</label>
     <input type="email" name="email" placeholder="admin@example.com" required>
     <label>Нууц үг</label>
